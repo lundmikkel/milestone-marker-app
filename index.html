@@ -10,6 +10,10 @@
       integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
       crossorigin="anonymous"
     />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
   </head>
   <body>
     <main>
@@ -39,14 +43,24 @@
                 Generate Feed
               </button>
               <div id="feed-output" class="alert alert-primary mt-4 mb-0 d-none" role="status">
-                <span class="fw-semibold">Feed URL:</span>
-                <a
-                  id="feed-link"
-                  class="d-block mt-2 text-break"
-                  href="#"
-                  target="_blank"
-                  rel="noopener"
-                ></a>
+                <span class="fw-semibold d-block mb-3">Feed URL</span>
+                <div class="input-group">
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="feed-url"
+                    readonly
+                    aria-label="Generated feed URL"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    id="copy-btn"
+                    aria-label="Copy feed URL"
+                  >
+                    <i class="bi bi-clipboard"></i>
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -59,16 +73,18 @@
         const dateInput = document.getElementById('milestone-date');
         const generateButton = document.getElementById('generate-btn');
         const feedOutput = document.getElementById('feed-output');
-        const feedLink = document.getElementById('feed-link');
+        const feedUrlInput = document.getElementById('feed-url');
+        const copyButton = document.getElementById('copy-btn');
 
         const baseUrl = 'https://fa-milestone-marker-efhuhja9gqezgjfv.swedencentral-01.azurewebsites.net/api/feed/';
+        copyButton.disabled = true;
 
         dateInput.addEventListener('input', () => {
           generateButton.disabled = !dateInput.value;
           if (!dateInput.value) {
             feedOutput.classList.add('d-none');
-            feedLink.textContent = '';
-            feedLink.removeAttribute('href');
+            feedUrlInput.value = '';
+            copyButton.disabled = true;
           }
         });
 
@@ -81,9 +97,32 @@
           }
 
           const feedUrl = `${baseUrl}${selectedDate}`;
-          feedLink.href = feedUrl;
-          feedLink.textContent = feedUrl;
+          feedUrlInput.value = feedUrl;
+          copyButton.disabled = false;
           feedOutput.classList.remove('d-none');
+          feedUrlInput.focus();
+          feedUrlInput.select();
+        });
+
+        feedUrlInput.addEventListener('focus', () => {
+          feedUrlInput.select();
+        });
+
+        feedUrlInput.addEventListener('mouseup', (event) => {
+          event.preventDefault();
+        });
+
+        copyButton.addEventListener('click', async () => {
+          if (!feedUrlInput.value) {
+            return;
+          }
+
+          try {
+            await navigator.clipboard.writeText(feedUrlInput.value);
+          } catch (error) {
+            feedUrlInput.select();
+            document.execCommand('copy');
+          }
         });
       })();
     </script>
