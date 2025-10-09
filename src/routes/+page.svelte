@@ -1,5 +1,5 @@
 <script lang="ts">
-	import logoUrl from '$lib/assets/logo.png?url';
+	import logoUrl from '$lib/assets/logo.svg?url';
 	import { DateField } from 'bits-ui';
 	import type { DateValue } from '@internationalized/date';
 	import { getLocalTimeZone, today } from '@internationalized/date';
