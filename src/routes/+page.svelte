@@ -2,10 +2,76 @@
 	import logoUrl from '$lib/assets/logo.svg?url';
 	import { DateField } from 'bits-ui';
 	import type { DateValue } from '@internationalized/date';
-	import { getLocalTimeZone, today } from '@internationalized/date';
+	import { getLocalTimeZone, now } from '@internationalized/date';
+	import { onDestroy } from 'svelte';
+
+	const feedBaseUrl = 'https://ical.milestonemarker.app/feed/';
+	const placeholder = now(getLocalTimeZone());
+	const pad = (value: number) => value.toString().padStart(2, '0');
 
 	let referenceDate: DateValue | undefined;
-	const placeholder = today(getLocalTimeZone());
+	let feedUrl = '';
+	let feedUrlInput: HTMLInputElement | null = null;
+	let copyButtonLabel = 'Copy';
+	let copyResetTimeout: ReturnType<typeof setTimeout> | undefined;
+
+	const formatDateValueToIsoMinute = (date: DateValue) => {
+		const hour = 'hour' in date ? date.hour : 0;
+		const minute = 'minute' in date ? date.minute : 0;
+
+		return `${date.year}-${pad(date.month)}-${pad(date.day)}T${pad(hour)}:${pad(minute)}`;
+	};
+
+	const selectFeedUrl = () => {
+		feedUrlInput?.select();
+	};
+
+	const clearCopyResetTimeout = () => {
+		if (copyResetTimeout) {
+			clearTimeout(copyResetTimeout);
+			copyResetTimeout = undefined;
+		}
+	};
+
+	const scheduleCopyReset = () => {
+		clearCopyResetTimeout();
+		copyResetTimeout = setTimeout(() => {
+			copyButtonLabel = 'Copy';
+			copyResetTimeout = undefined;
+		}, 2000);
+	};
+
+	const copyFeedUrl = async () => {
+		if (!feedUrl) {
+			return;
+		}
+
+		selectFeedUrl();
+
+		if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+			try {
+				await navigator.clipboard.writeText(feedUrl);
+				copyButtonLabel = 'Copied!';
+			} catch {
+				copyButtonLabel = 'Copy failed';
+			}
+		} else {
+			copyButtonLabel = 'Copy not supported';
+		}
+
+		scheduleCopyReset();
+	};
+
+	$: feedUrl = referenceDate
+		? `${feedBaseUrl}${formatDateValueToIsoMinute(referenceDate)}`
+		: '';
+
+	$: if (!feedUrl) {
+		copyButtonLabel = 'Copy';
+		clearCopyResetTimeout();
+	}
+
+	onDestroy(clearCopyResetTimeout);
 </script>
 
 <section class="flex flex-col items-center gap-8 px-6 py-16 text-center">
@@ -58,5 +124,32 @@
 				</DateField.Input>
 			</div>
 		</DateField.Root>
+
+		{#if feedUrl}
+			<div class="mt-6 flex flex-col gap-2">
+				<label for="feed-url" class="text-left text-base font-semibold text-slate-700">
+					Calendar feed URL
+				</label>
+				<div class="flex items-center gap-2">
+					<input
+						id="feed-url"
+						class="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-base shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 hover:border-slate-400"
+						type="text"
+						bind:this={feedUrlInput}
+						value={feedUrl}
+						readonly
+						on:click={selectFeedUrl}
+						on:focus={selectFeedUrl}
+					/>
+					<button
+						type="button"
+						class="rounded-xl bg-blue-500 px-4 py-2 text-base font-semibold text-white shadow transition hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+						on:click={copyFeedUrl}
+					>
+						{copyButtonLabel}
+					</button>
+				</div>
+			</div>
+		{/if}
 	</form>
 </section>
