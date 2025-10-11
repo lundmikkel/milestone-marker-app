@@ -43,5 +43,10 @@
 		"vite": "^7.1.7",
 		"vitest": "^3.2.4",
 		"vitest-browser-svelte": "^1.1.0"
+	},
+	"dependencies": {
+		"@internationalized/date": "^3.10.0",
+		"bits-ui": "^2.11.4",
+		"phosphor-svelte": "^3.0.1"
 	}
 }

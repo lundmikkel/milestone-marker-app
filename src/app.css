@@ -1,2 +1,12 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
+
+@theme {
+	--color-brand: #003060;
+}
+
+@layer base {
+	body {
+		@apply text-brand;
+	}
+}
