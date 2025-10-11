@@ -3,28 +3,62 @@
 	import { DateField } from 'bits-ui';
 	import type { DateValue } from '@internationalized/date';
 	import { getLocalTimeZone, now } from '@internationalized/date';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 
 	const feedBaseUrl = 'https://ical.milestonemarker.app/feed/';
 	const placeholder = now(getLocalTimeZone());
-	const pad = (value: number) => value.toString().padStart(2, '0');
+	const pad = (value: number, length = 2) => value.toString().padStart(length, '0');
 
 	let referenceDate: DateValue | undefined;
+	let timeZone = getLocalTimeZone();
+	let timeZoneOptions: string[] = [timeZone];
+	const fallbackTimeZones = [
+		'UTC',
+		'Etc/UTC',
+		'America/New_York',
+		'Europe/London',
+		'Europe/Copenhagen',
+		'Asia/Tokyo',
+		'Australia/Sydney'
+	];
+	const fallbackOptions = Array.from(new Set([timeZone, ...fallbackTimeZones]));
+
 	let feedUrl = '';
 	let feedUrlInput: HTMLInputElement | null = null;
 	let copyButtonLabel = 'Copy';
 	let copyResetTimeout: ReturnType<typeof setTimeout> | undefined;
+	let previousFeedUrl = '';
+
+	onMount(() => {
+		if (typeof Intl === 'undefined') {
+			timeZoneOptions = fallbackOptions;
+			return;
+		}
+
+		try {
+			if (typeof Intl.supportedValuesOf === 'function') {
+				const supported = Intl.supportedValuesOf('timeZone');
+				timeZoneOptions = supported.length ? supported : fallbackOptions;
+
+				if (!timeZoneOptions.includes(timeZone)) {
+					timeZone = timeZoneOptions[0] ?? timeZone;
+				}
+			} else {
+				timeZoneOptions = fallbackOptions;
+			}
+		} catch {
+			timeZoneOptions = fallbackOptions;
+		}
+	});
 
 	const formatDateValueToIsoMinute = (date: DateValue) => {
 		const hour = 'hour' in date ? date.hour : 0;
 		const minute = 'minute' in date ? date.minute : 0;
 
-		return `${date.year}-${pad(date.month)}-${pad(date.day)}T${pad(hour)}:${pad(minute)}`;
+		return `${pad(date.year, 4)}-${pad(date.month)}-${pad(date.day)}T${pad(hour)}:${pad(minute)}`;
 	};
 
-	const selectFeedUrl = () => {
-		feedUrlInput?.select();
-	};
+	const selectFeedUrl = () => feedUrlInput?.select();
 
 	const clearCopyResetTimeout = () => {
 		if (copyResetTimeout) {
@@ -63,12 +97,17 @@
 	};
 
 	$: feedUrl = referenceDate
-		? `${feedBaseUrl}${formatDateValueToIsoMinute(referenceDate)}`
+		? `${feedBaseUrl}${formatDateValueToIsoMinute(referenceDate)}${timeZone ? `/${timeZone}` : ''}`
 		: '';
 
 	$: if (!feedUrl) {
 		copyButtonLabel = 'Copy';
 		clearCopyResetTimeout();
+		previousFeedUrl = '';
+	} else if (feedUrl !== previousFeedUrl) {
+		copyButtonLabel = 'Copy';
+		clearCopyResetTimeout();
+		previousFeedUrl = feedUrl;
 	}
 
 	onDestroy(clearCopyResetTimeout);
@@ -94,7 +133,7 @@
 			bind:value={referenceDate}
 			{placeholder}
 			granularity="minute"
-			hideTimeZone={false}
+			hideTimeZone={true}
 		>
 			<div class="flex w-full flex-col gap-3">
 				<DateField.Label class="text-left text-base font-semibold text-slate-700">
@@ -125,6 +164,21 @@
 			</div>
 		</DateField.Root>
 
+		<div class="mt-6 flex flex-col gap-2">
+			<label for="time-zone" class="text-left text-base font-semibold text-slate-700">
+				Time zone
+			</label>
+			<select
+				id="time-zone"
+				class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-base shadow-sm transition hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+				bind:value={timeZone}
+			>
+				{#each timeZoneOptions as option}
+					<option value={option}>{option}</option>
+				{/each}
+			</select>
+		</div>
+
 		{#if feedUrl}
 			<div class="mt-6 flex flex-col gap-2">
 				<label for="feed-url" class="text-left text-base font-semibold text-slate-700">
@@ -133,7 +187,7 @@
 				<div class="flex items-center gap-2">
 					<input
 						id="feed-url"
-						class="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-base shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 hover:border-slate-400"
+						class="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-base shadow-sm transition hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
 						type="text"
 						bind:this={feedUrlInput}
 						value={feedUrl}
@@ -143,7 +197,7 @@
 					/>
 					<button
 						type="button"
-						class="rounded-xl bg-blue-500 px-4 py-2 text-base font-semibold text-white shadow transition hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+						class="rounded-xl bg-blue-500 px-4 py-2 text-base font-semibold text-white shadow transition hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none"
 						on:click={copyFeedUrl}
 					>
 						{copyButtonLabel}
