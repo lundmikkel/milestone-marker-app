@@ -1,36 +1,15 @@
 import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
-import { sveltekit } from '@sveltejs/kit/vite';
 
-export default defineConfig({
-	plugins: [tailwindcss(), sveltekit()],
+export default defineConfig(({ command }) => ({
+	plugins: [tailwindcss(), react()],
+	base: command === 'serve' ? '/' : process.env.BASE_PATH || '/',
+	build: { outDir: 'build' },
 	test: {
-		expect: { requireAssertions: true },
-		projects: [
-			{
-				extends: './vite.config.ts',
-				test: {
-					name: 'client',
-					environment: 'browser',
-					browser: {
-						enabled: true,
-						provider: 'playwright',
-						instances: [{ browser: 'chromium' }]
-					},
-					include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
-					exclude: ['src/lib/server/**'],
-					setupFiles: ['./vitest-setup-client.ts']
-				}
-			},
-			{
-				extends: './vite.config.ts',
-				test: {
-					name: 'server',
-					environment: 'node',
-					include: ['src/**/*.{test,spec}.{js,ts}'],
-					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
-				}
-			}
-		]
+		environment: 'jsdom',
+		include: ['src/**/*.{test,spec}.{ts,tsx}'],
+		setupFiles: ['./src/test/setup.ts'],
+		restoreMocks: true
 	}
-});
+}));
