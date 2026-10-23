@@ -1,9 +1,19 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-	webServer: {
-		command: 'npm run build && npm run preview',
-		port: 4173
+	testDir: 'e2e',
+	use: {
+		baseURL: 'http://127.0.0.1:4173',
+		locale: 'en-US',
+		timezoneId: 'Europe/Copenhagen'
 	},
-	testDir: 'e2e'
+	projects: [
+		{ name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+		{ name: 'mobile', use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium' } }
+	],
+	webServer: {
+		command: 'npm run build && npm run preview -- --host 127.0.0.1',
+		url: 'http://127.0.0.1:4173',
+		reuseExistingServer: !process.env.CI
+	}
 });
